@@ -1,44 +1,66 @@
 import random
 import pyglet
 
-sound = '535353124325535353124321224431524325535353124321'
-pace =  '111111211114111111211114111111211114111111211112'
+from .prepare import *
+
+class SceneManager(object):
+    def __init__(self):
+        self.current_scene = None
+        self._scenes ={}
+
+    def add_scene(self,scene_name,scene):
+        self._scenes[scene_name] = scene
+        self.current_scene = scene
+
+    def set_scene(self,scene_name):
+        if self.current_scene:
+            self.current_scene.deactivate()
+        self.current_scene = self._scenes[scene_name]
+        self.current_scene.activate()
+
+    def update(self,dt):
+        self.current_scene.update(dt)
 
 
+class Scene(object):
+    def __init__(self,scene_manager):
+        self._w = {}
+        self.controls = None
+        self.manager = scene_manager
 
-SOUND = {}
+    def set_scene(self,scene_name):
+        self.manager.set_scene(scene_name)
+
+    def add_window(self,window):
+        self._w[window] = 0
+
+    def deactivate(self):
+        for w in self._w:
+            w.close()
+
+    def activate(self):
+        pass
+
+    def update(self,dt):
+        for w in self._w:
+            w.update(dt)
 
 
-SOUND['d4'] = pyglet.resource.media('sound/d4.wav',streaming=False)
-SOUND['e4'] = pyglet.resource.media('sound/e4.wav',streaming=False)
-SOUND['f4'] = pyglet.resource.media('sound/f4.wav',streaming=False)
-SOUND['g4'] = pyglet.resource.media('sound/g4.wav',streaming=False)
-SOUND['a4'] = pyglet.resource.media('sound/a4.wav',streaming=False)
-SOUND['b4'] = pyglet.resource.media('sound/b4.wav',streaming=False)
-SOUND['c5'] = pyglet.resource.media('sound/c5.wav',streaming=False)
-SOUND['d5'] = pyglet.resource.media('sound/d5.wav',streaming=False)
-SOUND['e5'] = pyglet.resource.media('sound/e5.wav',streaming=False)
-SOUND['f5'] = pyglet.resource.media('sound/f5.wav',streaming=False)
-
-
-
-pyglet.font.add_file('music_font.ttf')
-music_font = pyglet.font.load('Music For Your Ears')
-
-class Key(pyglet.window.Window):
-    nums = (x for x in range(10))
-
-    colors =[(255,0,0,255),(0,255,0,255)]
-    states = ('right', 'wrong')
-
-    def __init__(self,num,manager,*args,**kwargs):
-        super(Key,self).__init__(width = 80,height = 100, style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,visible = False,*args,**kwargs)
-        self.num = num
-        self.set_location(200+self.width*self.num*2,0)
+class Block(pyglet.window.Window):
+    colors = [(255,128,0),(255,255,0),(128,255,0),(0,255,128),(0,255,255),(0,128,255),(0,0,255),(128,0,255),(255,0,255),(255,0,128)]
+    def __init__(self,x,y,y_velocity,y_acceleration,text,manager,*args,**kwargs):
+        super(Block,self).__init__(width = 80,height = 100, style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,*args,**kwargs)
         self.manager = manager
-        self.state = 'wrong'
+        self.color = random.choice(Note.colors)
+        self.text = text
+        self.label = pyglet.text.Label(text = self.text,font_name='Music For Your Ears',
+                                       font_size=self.width//2,
+                                       x=self.width//2, y=self.height//2,
+                                       anchor_x='center', anchor_y='center',color = (0,0,0,255))
+        self.y_velocity = y_velocity
+        self.y_acceleration = y_acceleration
+        self.set_location(x,y)
         self.switch_to()
-
 
     def on_key_press(self,symbol, modifiers):
         return self.manager.on_key_press(symbol, modifiers)
@@ -47,48 +69,37 @@ class Key(pyglet.window.Window):
         return self.manager.on_key_release(symbol, modifiers)
 
     def on_draw(self,*args):
-        if self.state == 'wrong':
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+        pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
                              ('v2i', (
-                             10, 10, self.width-10, 10, self.width-10, self.height-10, 10, self.height-10)),
-                             ('c3B', (255,0,0,255,0,0,255,0,0,255,0,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             0, 0, self.width, 0, self.width-10, 10, 10, 10)),
-                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             self.width, 0,self.width,self.height, self.width-10,self.height- 10, self.width-10, 10)),
-                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             self.width, self.height,0,self.height, 10,self.height-10, self.width-10, self.height-10)),
-                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             0, 0,0,self.height, 10,self.height-10, 10,10)),
-                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
-        if self.state == 'right':
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             10, 10, self.width-10, 10, self.width-10, self.height-10, 10, self.height-10)),
-                             ('c3B', (0,255,0,0,255,0,0,255,0,0,255,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             0, 0, self.width, 0, self.width-10, 10, 10, 10)),
-                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             self.width, 0,self.width,self.height, self.width-10,self.height- 10, self.width-10, 10)),
-                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             self.width, self.height,0,self.height, 10,self.height-10, self.width-10, self.height-10)),
-                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
-            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
-                             ('v2i', (
-                             0, 0,0,self.height, 10,self.height-10, 10,10)),
-                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
+                                 0, 0, self.width, 0, self.width, self.height, 0,self.height)),
+                             ('c3B', (255, 255, 255, 255, 255, 255, self.color[0],self.color[1],self.color[2],self.color[0],self.color[1],self.color[2])))
+        self.label.draw()
+
+    def update(self,dt,*args):
+        x,y = self.get_location()
+        self.y_velocity += self.y_acceleration*dt
+        y += self.y_velocity*dt
+        y = int(y)
+        self.set_location(x, y)
+        if y <= 0 or self.y_velocity >= 0:
+            self.close()
+
+
+class TitleBlock(Block):
+    def __init__(self,*args,**kwargs):
+        super(TitleBlock,self).__init__(*args,**kwargs)
+
+    def update(self,dt,*args):
+        x,y = self.get_location()
+        self.y_velocity += self.y_acceleration*dt
+        y += self.y_velocity*dt
+        y = int(y)
+        self.set_location(x, y)
+        if y <= 300:
+            self.y_velocity = 0
+            self.y_acceleration = 0
+
+
 
 
 class Note(pyglet.window.Window):
@@ -135,15 +146,32 @@ class Note(pyglet.window.Window):
         if y <= 0 or self.y_velocity >= 0:
             self.close()
 
-
-
-
-
 class Control(pyglet.window.Window):
 
-    def __init__(self,game,*args,**kwargs):
-        super(Control,self).__init__(style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,*args,**kwargs)
-        self.game = game
+    def __init__(self,width,height,scene,*args,**kwargs):
+        super(Control,self).__init__(width=width,height=height,style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,*args,**kwargs)
+        self.scene = scene
+
+    def on_key_press(self, symbol, modifiers):
+        pass
+
+    def on_key_release(self,symbol,modifiers):
+        pass
+
+class TitleControl(Control):
+    def __init__(self,*args,**kwargs):
+        super(TitleControl,self).__init__(*args,**kwargs)
+
+    def on_key_release(self,symbol,modifiers):
+        if symbol == pyglet.window.key.ESCAPE:
+            pyglet.app.exit()
+        elif symbol == pyglet.window.key.ENTER:
+            self.scene.set_scene('game')
+
+class GameControl(Control):
+    def __init__(self,*args,**kwargs):
+        super(GameControl,self).__init__(*args,**kwargs)
+        self.game = self.scene
         self.switch_to()
 
     def on_key_press(self,symbol, modifiers):
@@ -262,50 +290,67 @@ class Control(pyglet.window.Window):
         elif symbol == pyglet.window.key.SEMICOLON:
             self.game.keys[';'].set_visible(False)
 
+class Key(pyglet.window.Window):
+    nums = (x for x in range(10))
+
+    colors =[(255,0,0,255),(0,255,0,255)]
+    states = ('right', 'wrong')
+
+    def __init__(self,num,manager,*args,**kwargs):
+        super(Key,self).__init__(width = 80,height = 100, style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,visible = False,*args,**kwargs)
+        self.num = num
+        self.set_location(200+self.width*self.num*2,0)
+        self.manager = manager
+        self.state = 'wrong'
+        self.switch_to()
 
 
-class Game(object):
-    def __init__(self):
-        self.t = 0
-        self.timer = 0.75
+    def on_key_press(self,symbol, modifiers):
+        return self.manager.on_key_press(symbol, modifiers)
 
+    def on_key_release(self,symbol,modifiers):
+        return self.manager.on_key_release(symbol, modifiers)
 
-        self.control = Control(self,width=2000, height=10)
-        self.control.set_location(0, 100)
-        self.keys = {}
-        self.notes ={}
-
-
-
-        self.keys['a'] = Key(0, self.control)
-        self.keys['s'] = Key(1, self.control)
-        self.keys['d'] = Key(2, self.control)
-        self.keys['f'] = Key(3, self.control)
-        self.keys['g'] = Key(4, self.control)
-        self.keys['h'] = Key(5, self.control)
-        self.keys['j']= Key(6, self.control)
-        self.keys['k'] = Key(7, self.control)
-        self.keys['l'] = Key(8, self.control)
-        self.keys[';'] = Key(9, self.control)
-
-
-    def update(self,dt,*args):
-        self.t += dt
-        if self.t >= self.timer:
-            num = random.randint(0, 9)
-            a = Note(self, num, self.control)
-            self.notes[a] = a.text
-
-            self.t -= self.timer
-        for w in self.notes:
-            w.update(dt)
-
-
-    def run(self):
-        pyglet.clock.schedule_interval(self.update, 1 / 60.0)
-        pyglet.app.run()
-
-
-
-game = Game()
-game.run()
+    def on_draw(self,*args):
+        if self.state == 'wrong':
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             10, 10, self.width-10, 10, self.width-10, self.height-10, 10, self.height-10)),
+                             ('c3B', (255,0,0,255,0,0,255,0,0,255,0,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             0, 0, self.width, 0, self.width-10, 10, 10, 10)),
+                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             self.width, 0,self.width,self.height, self.width-10,self.height- 10, self.width-10, 10)),
+                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             self.width, self.height,0,self.height, 10,self.height-10, self.width-10, self.height-10)),
+                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             0, 0,0,self.height, 10,self.height-10, 10,10)),
+                             ('c3B', (255,255,255,255,255,255,255,0,0,255,0,0)))
+        if self.state == 'right':
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             10, 10, self.width-10, 10, self.width-10, self.height-10, 10, self.height-10)),
+                             ('c3B', (0,255,0,0,255,0,0,255,0,0,255,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             0, 0, self.width, 0, self.width-10, 10, 10, 10)),
+                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             self.width, 0,self.width,self.height, self.width-10,self.height- 10, self.width-10, 10)),
+                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             self.width, self.height,0,self.height, 10,self.height-10, self.width-10, self.height-10)),
+                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
+            pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                             0, 0,0,self.height, 10,self.height-10, 10,10)),
+                             ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
