@@ -34,15 +34,12 @@ def screen_width():
 def main():
     try:
         sw = screen_width()
-        margin = (sw - 800)//2
     except:
         sw = 800
-        margin = 0
 
     sm = SceneManager()
     sm.add_scene('game',Game(sm,sw))
     sm.add_scene('title',Title(sm,sw))
-
 
     pyglet.clock.schedule_interval(sm.update, 1 / 60.0)
     pyglet.app.run()

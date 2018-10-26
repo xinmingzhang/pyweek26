@@ -13,10 +13,7 @@ class SceneManager(object):
         self.current_scene = scene
 
     def set_scene(self,scene_name):
-        if self.current_scene:
-            self.current_scene.deactivate()
         self.current_scene = self._scenes[scene_name]
-        self.current_scene.activate()
 
     def update(self,dt):
         self.current_scene.update(dt)
@@ -34,12 +31,6 @@ class Scene(object):
     def add_window(self,window):
         self._w[window] = 0
 
-    def deactivate(self):
-        for w in self._w:
-            w.close()
-
-    def activate(self):
-        pass
 
     def update(self,dt):
         for w in self._w:
@@ -60,7 +51,7 @@ class Block(pyglet.window.Window):
         self.y_velocity = y_velocity
         self.y_acceleration = y_acceleration
         self.set_location(x,y)
-        self.switch_to()
+
 
     def on_key_press(self,symbol, modifiers):
         return self.manager.on_key_press(symbol, modifiers)
@@ -91,15 +82,13 @@ class TitleBlock(Block):
 
     def update(self,dt,*args):
         x,y = self.get_location()
-        self.y_velocity += self.y_acceleration*dt
-        y += self.y_velocity*dt
-        y = int(y)
-        self.set_location(x, y)
         if y <= 300:
-            self.y_velocity = 0
-            self.y_acceleration = 0
-
-
+            pass
+        else:
+            self.y_velocity += self.y_acceleration*dt
+            y += self.y_velocity*dt
+            y = int(y)
+            self.set_location(x, y)
 
 
 class Note(pyglet.window.Window):
@@ -111,7 +100,10 @@ class Note(pyglet.window.Window):
         self.game = game
         self.num = num
 
-        self.set_location(200+self.width*self.num*2,1000)
+        if self.game.width >=1000:
+            self.set_location((self.game.width - 980)//2+100*self.num,1000)
+        else:
+            self.set_location((self.game.width - 800) // 2 + 80*self.num, 1000)
         self.y_velocity = -500
         self.y_acceleration = 100
 
@@ -166,13 +158,28 @@ class TitleControl(Control):
         if symbol == pyglet.window.key.ESCAPE:
             pyglet.app.exit()
         elif symbol == pyglet.window.key.ENTER:
+            if self.scene.h:
+                self.scene.h.close()
+            for w in self.scene._w:
+                w.close()
             self.scene.set_scene('game')
+
 
 class GameControl(Control):
     def __init__(self,*args,**kwargs):
         super(GameControl,self).__init__(*args,**kwargs)
         self.game = self.scene
-        self.switch_to()
+
+    def on_draw(self, *args):
+        x = int(self.width / 48 * self.game.pointer)
+        pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                                 0, 0, x, 0, x, self.height, 0, self.height)),
+                             ('c3B', (255, 255, 255, 255, 255, 255, 255, 0, 0, 255, 0, 0)))
+        pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                                 x, x, self.width, 0, self.width, self.height, x, self.height)),
+                             ('c3B', (255, 255, 255, 255, 255, 255, 0, 255, 0, 0, 255, 0)))
 
     def on_key_press(self,symbol, modifiers):
         if symbol == pyglet.window.key.A:
@@ -265,6 +272,9 @@ class GameControl(Control):
                         self.game.keys[';'].state= 'right'
             self.game.keys[';'].set_visible()
             SOUND['f5'].play()
+        elif symbol == pyglet.window.key.ENTER:
+            if self.game.pointer == len(MUSIC):
+                pyglet.app.exit()
         elif symbol == pyglet.window.key.ESCAPE:
             pyglet.app.exit()
 
@@ -296,13 +306,17 @@ class Key(pyglet.window.Window):
     colors =[(255,0,0,255),(0,255,0,255)]
     states = ('right', 'wrong')
 
-    def __init__(self,num,manager,*args,**kwargs):
+    def __init__(self,game,num,manager,*args,**kwargs):
         super(Key,self).__init__(width = 80,height = 100, style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,visible = False,*args,**kwargs)
+        self.game = game
         self.num = num
-        self.set_location(200+self.width*self.num*2,0)
+        if self.game.width >=1000:
+            self.set_location((self.game.width - 980)//2 + 100*self.num,0)
+        else:
+            self.set_location((self.game.width - 800) // 2 + 80*self.num, 0)
         self.manager = manager
         self.state = 'wrong'
-        self.switch_to()
+
 
 
     def on_key_press(self,symbol, modifiers):
@@ -354,3 +368,46 @@ class Key(pyglet.window.Window):
                              ('v2i', (
                              0, 0,0,self.height, 10,self.height-10, 10,10)),
                              ('c3B', (255,255,255,255,255,255,0,255,0,0,255,0)))
+
+
+
+class Hint(pyglet.window.Window):
+    def __init__(self,game,text,manager,y_velocity,y_acceleration,*args,**kwargs):
+        super(Hint,self).__init__(width = 400,height = 100, style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS,*args,**kwargs)
+        self.game = game
+        self.text = text
+        self.manager = manager
+        self.label = pyglet.text.Label(text=self.text, font_name='ChloesMusic',
+                                       font_size=self.height // 3,
+                                       x=self.width // 2, y=self.height // 2,
+                                       anchor_x='center', anchor_y='center', color=(0, 0, 0, 255))
+        self.y_velocity = y_velocity
+        self.y_acceleration = y_acceleration
+        self.set_location((self.game.width-400)//2,1000)
+
+
+
+
+    def on_key_press(self, symbol, modifiers):
+        return self.manager.on_key_press(symbol, modifiers)
+
+    def on_key_release(self, symbol, modifiers):
+        return self.manager.on_key_release(symbol, modifiers)
+
+    def on_draw(self, *args):
+        pyglet.graphics.draw(4, pyglet.gl.GL_QUADS,
+                             ('v2i', (
+                                 0, 0, self.width, 0, self.width, self.height, 0, self.height)),
+                             ('c3B', (
+                             255, 255, 0, 0, 255, 255, 255, 0, 255,255,255,255)))
+        self.label.draw()
+
+    def update(self, dt, *args):
+        x, y = self.get_location()
+        if y <= 500 or self.y_velocity>=0:
+            pass
+        else:
+            self.y_velocity += self.y_acceleration * dt
+            y += self.y_velocity * dt
+            y = int(y)
+            self.set_location(x, y)
